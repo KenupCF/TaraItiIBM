@@ -14,7 +14,7 @@ options(warn = 2)
 folder_extr <- "D:\\03-Work\\01-Science\\00-Research Projects\\Tara Iti\\IBM\\Results\\bigGoMoreAlts"
 folderID    <- gsub(x = folder_extr, "^.*/", "")   # Extract last path segment as a folder label
 loopSize    <- 5e3                                  # Max number of files to attempt per run
-time_limit_secs <- 60*60*(1+(3/4))                  # 3 hours in seconds
+time_limit_secs <- 60*60*(1+(3/4))                  # time limit in seconds
 buffer_size <- 25                                   # Number of records to batch-write into DuckDB
 
 # =======================
