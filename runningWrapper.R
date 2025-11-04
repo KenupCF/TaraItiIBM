@@ -1,0 +1,13 @@
+wd<-"/models/TaraIti"
+
+if(!dir.exists(wd)){
+  wd<-"D:/03-Work/01-Science/00-Research Projects/Tara Iti/IBM"
+  
+}
+if(!dir.exists(wd)){
+  wd<-"C:/Users/Caio.Kenup/TaraItiIBM"
+  
+}
+setwd(wd)
+
+source("RunningModels.R")
