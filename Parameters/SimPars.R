@@ -4,7 +4,7 @@ model_pars$sim<-list()
 model_pars$sim$use_genetics<-TRUE
 
 model_pars$sim$n_years<-50
-model_pars$sim$n_iter<-10
+model_pars$sim$n_iter<-1e3
 
 # model_pars$sim$n_years<-30
 # model_pars$sim$n_iter<-5
