@@ -1,9 +1,9 @@
-runLabel<-"toy"
+runLabel<-"bigRunV2"
 get_runs_from_gsheet<-FALSE
 replace_runs_gsheet<-FALSE
 prior_rng_seed<-1e3
 runAnalysis<-F
-wd<-"/models/TaraIti"
+wd<-"~/TaraItiIBM"
 
 if(!dir.exists(wd)){
   wd<-"D:/03-Work/01-Science/00-Research Projects/Tara Iti/TaraItiIBM"
