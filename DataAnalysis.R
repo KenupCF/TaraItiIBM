@@ -19,7 +19,7 @@ require(RColorBrewer)
 require(colorspace)
 
 # Connect to DuckDB database
-db_path <- "D:/03-Work/01-Science/00-Research Projects/Tara Iti/IBM/Results/bigGoMoreAlts/bigGoMoreAlts.duckdb"
+db_path <- "D:/03-Work/01-Science/00-Research Projects/Tara Iti/TaraItiIBM/Results/bigRunV2/bigRunv2a.duckdb"
 con <- dbConnect(duckdb::duckdb(), dbdir = db_path, read_only = FALSE)
 
 # Load tables from the DuckDB database
@@ -52,6 +52,7 @@ resu_summary<-resu%>%
   group_by(alt)%>%
   summarise(probExt=mean(extinct),avTrend=mean(trend),
             avN=mean(finalN),
+            sdN=sd(finalN),
             avFp=mean(Fp),
             avKp=mean(Kp))%>%
   left_join(mgmt)
@@ -70,8 +71,8 @@ resu <- summary %>%
   dplyr::summarise(
     noRuns=n(),
     avFinalN = mean(finalN * (!extinct)),
-    lclFinalN = quantile(finalN * (!extinct), 0.025, na.rm = TRUE),
-    uclFinalN = quantile(finalN * (!extinct), 0.975, na.rm = TRUE),
+    lclFinalN = pmax(0,avFinalN - 1.96*sd(finalN* (!extinct))),
+    uclFinalN = pmax(0,avFinalN + 1.96*sd(finalN* (!extinct))),
     probPersist = 1 - mean(extinct),
     probExtinct = 1 - probPersist,
     propPopulationsDeclining = mean(trend < 1, na.rm = TRUE),
