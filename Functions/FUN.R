@@ -78,7 +78,9 @@ mortality <- function(pop, currentT, pars, seed = 19) {
   # Intercept and optional variation
   surv_mean <- mean <- pars$phi_df$Intercept
   cyc_var <- 0
-  sto_var <- 0
+  sto_var <- sapply(seq_along(current$id), function(i) {
+    qnorm(p = q_sample, mean = 0, sd = pars$cs_df$RE_time)
+  })
   surv_int <- surv_mean + sto_var + cyc_var
   
   # Survival probability by age, field, heritage, and origin
