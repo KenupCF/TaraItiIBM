@@ -358,6 +358,11 @@ estimate_se<-coeffs_full_set%>%
   summarise(av_var=sum(weight*(var+((estimate-estimate)^2))))%>%
   mutate(av_se=sqrt(av_var))
 
+surv_simulated_re<-estimate_se$av_se[1]/2
+
+estimate_se$av_se[1]<-estimate_se$av_se[1]-surv_simulated_re
+estimate_se$av_var[1]<-estimate_se$av_se[1]^2
+
 mod_av_coeffs<-estimate_avg%>%
   left_join(estimate_se)
 
@@ -375,6 +380,7 @@ mod_params <- mod_av$estimate %>%
                                     levels = c("juvenile", "immature", "adult")),
                        age=factor(0:2)))
 
+surv_data_analysis$bio$survival_coeff_temp_re<-surv_simulated_re
 
 surv_data_analysis$bio$survival<-mod_params
 surv_data_analysis$bio$survival_coeffs<-mod_av_coeffs
