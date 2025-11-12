@@ -79,7 +79,7 @@ mortality <- function(pop, currentT, pars, seed = 19) {
   surv_mean <- mean <- pars$phi_df$Intercept
   cyc_var <- 0
   sto_var <- sapply(seq_along(current$id), function(i) {
-    qnorm(p = q_sample, mean = 0, sd = pars$cs_df$RE_time)
+    qnorm(p = q_sample, mean = 0, sd = pars$phi_df$RE_time)
   })
   surv_int <- surv_mean + sto_var + cyc_var
   
@@ -346,8 +346,8 @@ recruitment <- function(pop, currentT, pars, seed = 19, envir_stoch = TRUE, star
         replace = FALSE
       )
       harvested_eggs <- eggs %>% dplyr::filter(mother_id %in% harvested_clutches_mom_id)
-      harvested_eggs$origin <- "AI"
-      harvested_eggs$id <- NA_character_
+      harvested_eggs$origin <- rep("AI",nrow(harvested_eggs))
+      harvested_eggs$id <- rep(NA_character_,nrow(harvested_eggs))
       
       # Mothers whose first clutch was harvested can lay a second clutch
       eggs <- eggs %>%
