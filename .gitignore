@@ -6,6 +6,8 @@ Data/
 .tokens/
 .secrets/
 Results/
-.vcv
-.inp
-.out
+*.vcv
+*.inp
+*.out
+*.OUT
+*.res
