@@ -728,3 +728,147 @@ output_clean_up_zip <- function(rev = FALSE) {
     file.rename(files, file.path(backup_dir, basename(files)))
   })
 }
+
+
+# ============================
+# pull_named
+# ============================
+# dplyr::pull with optional names from another column.
+pull_named <- function(.data, col, names_col = NULL) {
+  col <- rlang::enquo(col)
+  names_col <- rlang::enquo(names_col)
+  
+  vec <- dplyr::pull(.data, !!col)
+  if (!rlang::quo_is_null(names_col)) {
+    vec_names <- dplyr::pull(.data, !!names_col)
+    names(vec) <- vec_names
+  }
+  return(vec)
+}
+
+
+# =======================
+# process_result_file
+# =======================
+# Loads one .RData (expects object 'output') and returns tidy summaries and series.
+# Adds provenance fields (folder, filename, i) to each returned data frame.
+process_result_file <- function(filename, folder_id) {
+  suppressMessages({
+    load(filename)  # must load an object named 'output'
+    
+    # Identify replicate index and label
+    idx   <- unique(output$pop$i)
+    label <- output$run_label
+    
+    # output$pop<-output$pop
+    # Keep copy to find extinction time
+    output$pop0 <- output$pop
+    
+    # Find time steps where total alive == 0
+    zeroNs <- which(
+      output$pop0 %>%
+        dplyr::group_by(t) %>%
+        dplyr::summarise(N = sum(alive), .groups = "drop") %>%
+        dplyr::pull(N) == 0
+    )
+    
+    # First time step with zero population (NA if never zero)
+    suppressWarnings({
+      zeroN <- min(zeroNs)
+    })
+    
+    # Truncate series prior to extinction time (keeps NA -> no truncation)
+    output$pop         <- output$pop         %>% dplyr::filter(t < zeroN)
+    # output$egg_fate  <- output$egg_fate    %>% dplyr::filter(t < zeroN)
+    output$envir_stoch <- output$envir_stoch %>% dplyr::filter(t < zeroN)
+    
+    # Identify released individuals (origin != "Wild")
+    released_individuals <- output$pop %>%
+      dplyr::filter(origin != "Wild") %>%
+      dplyr::pull(id) %>%
+      unique()
+    
+    # Weighted means over last ~5 time steps for genetics outcomes
+    gen_final_outcome <- output$pop %>%
+      dplyr::filter(t %in% (max(t):(max(t) - 5)), alive) %>%
+      dplyr::group_by(t) %>%
+      dplyr::summarise(
+        N  = sum(alive),
+        Kp = mean(nz_heritage),
+        Fp = mean(Fi),
+        .groups = "drop"
+      ) %>%
+      dplyr::mutate(Nw = N / sum(N)) %>%
+      dplyr::summarise(
+        Kp = sum(Kp * Nw),
+        Fp = sum(Fp * Nw)
+      )
+    
+    # Total N series by replicate
+    N_df <- output$pop %>%
+      dplyr::group_by(t, i) %>%
+      dplyr::summarise(
+        N  = sum(alive),
+        Fp = sum(Fi * alive) / sum(alive),
+        Kp = sum(nz_heritage * alive) / sum(alive),
+        .groups = "drop"
+      )
+    
+    # Adult female series (age >= 3), used for trend & extinction metrics
+    N_ad_fem_df <- output$pop %>%
+      dplyr::filter(sex == "F", age >= 3) %>%
+      dplyr::group_by(t, i) %>%
+      dplyr::summarise(
+        N  = sum(alive),
+        Fp = sum(Fi * alive) / sum(alive),
+        Kp = sum(nz_heritage * alive) / sum(alive),
+        .groups = "drop"
+      )
+    
+    # Multiplicative growth rate lambda and its geometric mean
+    Ns <- dplyr::pull(N_ad_fem_df, N)
+    Ns_2 <- Ns
+    if (dplyr::last(Ns_2) == 0) Ns_2 <- Ns_2[-length(Ns_2)]  # avoid trailing zero
+    lambda <- (Ns_2[-1]) / (Ns_2[-length(Ns_2)])
+    trend  <- prod(lambda) ^ (1 / length(lambda))
+    
+    # Extinction flag and time (adult females <= 2)
+    finalN <- tail(Ns, 1)
+    extinct <- finalN <= 2
+    time_extinct <- ifelse(extinct, length(Ns), NA)
+    
+    # Build compact summary row
+    summ <- data.frame(
+      extinct = extinct,
+      finalN = finalN,
+      trend = trend,
+      time_extinct = time_extinct,
+      i = idx,
+      label = label
+    ) %>%
+      merge(gen_final_outcome)
+    
+    # Keep management and run parameters for reference
+    run_pars <- output$run_pars
+    mgmt     <- output$model_pars$mgmt
+  })
+  
+  # Pack outputs
+  resu <- list(
+    summary  = summ,
+    N_series = N_ad_fem_df,
+    # egg_fate = egg_fate,
+    mgmt     = mgmt,
+    run_pars = as.data.frame(run_pars)
+  )
+  
+  # Tag with provenance
+  resu <- lapply(resu, function(x) {
+    x$folder   <- folder_id
+    x$filename <- filename
+    x$i        <- idx
+    x
+  })
+  
+  return(resu)
+}

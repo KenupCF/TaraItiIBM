@@ -19,32 +19,83 @@ require(RColorBrewer)
 require(colorspace)
 
 # Connect to DuckDB database
-db_path <- "D:/03-Work/01-Science/00-Research Projects/Tara Iti/TaraItiIBM/Results/bigRunV2/bigRunv2a.duckdb"
+db_path <- "D:/03-Work/01-Science/00-Research Projects/Tara Iti/TaraItiIBM/Results/bigRunV2/bigRunv2b.duckdb"
 con <- dbConnect(duckdb::duckdb(), dbdir = db_path, read_only = FALSE)
 
 # Load tables from the DuckDB database
 summary <- dbGetQuery(con, "SELECT * FROM summary")
 run_pars <- dbGetQuery(con, "SELECT * FROM run_pars")
+pop <- dbGetQuery(con, "SELECT * FROM N_series")
 
-
-# hb_labels<-c("No habitat improvement","Habitat improved")
-# sf_labels<-c("Continued","Temporary")
-# 
-# # Add habitat scenario labels
-# run_pars <- run_pars %>%
-#   dplyr::mutate(Habitat_Scenario = case_when(
-#     prob_imp_for == 0 ~  hb_labels[1],
-#     prob_imp_for == 1 ~  hb_labels[2]
-#   ))
-
-# Load management strategies
-# mgmt <- dbGetQuery(con, "SELECT * FROM mgmt")
 
 dbDisconnect(con, shutdown = TRUE)
 
 mgmt<-run_pars%>%
   select(alt,field,admix_releases,egg_harvest_rate)%>%
-  filter(!duplicated(alt))
+  filter(!duplicated(alt)) %>%
+  mutate(
+    egg_harvest_desc = (paste0(
+      case_when(
+        egg_harvest_rate == 0.0 ~ "no egg harvest",
+        egg_harvest_rate == 0.1 ~ "10% egg harvest",
+        egg_harvest_rate == 0.5 ~ "50% egg harvest",
+        egg_harvest_rate == 1.0 ~ "100% egg harvest",
+        TRUE ~ "Unknown"
+      )
+    ))
+  )%>%
+  dplyr::mutate(admix_desc=case_when(admix_releases==FALSE~"No admixing",
+                                     admix_releases==FALSE~"Admixing"))
+
+pop<-pop%>%left_join(run_pars%>%select(i,alt,p))
+
+
+persistence_over_time<-pop%>%
+  dplyr::select(t,alt,p,N)%>%
+  tidyr::complete(t,alt,p,fill=list(N=0))%>%
+  dplyr::group_by(alt,t)%>%
+  dplyr::summarise(Persistence=mean(! N<=2))%>%
+  dplyr::left_join(mgmt)
+  
+  
+library(ggplot2)
+library(ggrepel)
+
+last_points <- persistence_over_time %>%
+  group_by(alt) %>%
+  filter(t == max(t)) %>%
+  ungroup()
+
+ggplot(persistence_over_time, aes(x = t, y = Persistence, group = alt, color = factor(alt))) +
+  geom_line(alpha = 0.6) +
+  geom_text_repel(
+    data = last_points,
+    aes(label = egg_harvest_rate),
+    # color = "black",
+    size = 3,
+    direction = "y",      # keeps labels spread vertically
+    hjust = 0,            # align to the right of points
+    nudge_x = 1,          # move labels a bit to the right
+    segment.color = "grey50",  # line color
+    segment.size = 0.3,        # line thickness
+    box.padding = 0.4,
+    point.padding = 0.2,
+    show.legend = FALSE
+  ) +
+  facet_grid(admix_desc~field)+
+  labs(
+    title = "Persistence over Time by Alternative",
+    x = "Time (t)",
+    y = "Persistence",
+    color = "Alternative"
+  ) +
+  theme_minimal() +
+  scale_color_viridis_d() +
+  theme(
+    plot.margin = margin(5.5, 100, 5.5, 5.5), # increase right margin
+    legend.position = "bottom"
+  ) +
+  coord_cartesian(clip = "off")  # ensures labels beyond plot area are visible
 
 resu<-left_join(summary,run_pars%>%select(i,alt,p))
 
@@ -56,13 +107,6 @@ resu_summary<-resu%>%
             avFp=mean(Fp),
             avKp=mean(Kp))%>%
   left_join(mgmt)
-
-# Merge summary data with management and run indexes
-dat <- summary %>%
-  dplyr::left_join(mgmt_trim%>%select(i,alt))%>%
-  dplyr::left_join(mgmt_summ)%>%
-  dplyr::left_join(run_pars %>% dplyr::select(i, p, alt))
-
 
 # Summarise results by strategy, habitat and feeding
 resu <- summary %>%
