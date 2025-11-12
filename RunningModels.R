@@ -7,7 +7,7 @@ get_runs_from_gsheet <- FALSE             # pull scheduled runs from Google Shee
 replace_runs_gsheet   <- FALSE            # overwrite Google Sheet "Runs" tab with computed runs
 prior_rng_seed <- 1e3                     # base seed for prior sampling per p
 runAnalysis <- FALSE                      # whether to re-run the analysis scripts
-wd <- "~/TaraItiIBM"                      # preferred working directory
+wd <- "/kenup/TaraItiIBM"                      # preferred working directory
 
 # Fallback working directories for different machines
 if (!dir.exists(wd)) { wd <- "D:/03-Work/01-Science/00-Research Projects/Tara Iti/TaraItiIBM" }
