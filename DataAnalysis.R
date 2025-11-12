@@ -45,7 +45,7 @@ mgmt<-run_pars%>%
     ))
   )%>%
   dplyr::mutate(admix_desc=case_when(admix_releases==FALSE~"No admixing",
-                                     admix_releases==FALSE~"Admixing"))
+                                     admix_releases==TRUE~"Admixing"))
 
 pop<-pop%>%left_join(run_pars%>%select(i,alt,p))
 
@@ -56,7 +56,14 @@ persistence_over_time<-pop%>%
   dplyr::group_by(alt,t)%>%
   dplyr::summarise(Persistence=mean(! N<=2))%>%
   dplyr::left_join(mgmt)
-  
+
+
+females_over_time<-pop%>%
+  dplyr::select(t,alt,p,N)%>%
+  tidyr::complete(t,alt,p,fill=list(N=0))%>%
+  dplyr::group_by(alt,t)%>%
+  dplyr::summarise(N_lcl=quantile(N,1-.975),N_ucl=quantile(N,.975),N=mean(N))%>%
+  dplyr::left_join(mgmt)
   
 library(ggplot2)
 library(ggrepel)
@@ -66,12 +73,17 @@ last_points <- persistence_over_time %>%
   filter(t == max(t)) %>%
   ungroup()
 
-ggplot(persistence_over_time, aes(x = t, y = Persistence, group = alt, color = factor(alt))) +
-  geom_line(alpha = 0.6) +
+last_points_N <- females_over_time %>%
+  group_by(alt) %>%
+  filter(t == max(t)) %>%
+  ungroup()
+
+persist_plot<-ggplot(persistence_over_time, aes(x = t, y = Persistence, group = alt, color = factor(alt))) +
+  geom_line(alpha = 1,lwd=1) +
   geom_text_repel(
     data = last_points,
-    aes(label = egg_harvest_rate),
-    # color = "black",
+    aes(label = egg_harvest_desc),
+    color = "black",
     size = 3,
     direction = "y",      # keeps labels spread vertically
     hjust = 0,            # align to the right of points
@@ -82,7 +94,7 @@ ggplot(persistence_over_time, aes(x = t, y = Persistence, group = alt, color = f
     point.padding = 0.2,
     show.legend = FALSE
   ) +
-  facet_grid(admix_desc~field)+
+  facet_grid(admix_desc~field,scales = "fixed")+
   labs(
     title = "Persistence over Time by Alternative",
     x = "Time (t)",
@@ -92,10 +104,51 @@ ggplot(persistence_over_time, aes(x = t, y = Persistence, group = alt, color = f
   theme_minimal() +
   scale_color_viridis_d() +
   theme(
-    plot.margin = margin(5.5, 100, 5.5, 5.5), # increase right margin
-    legend.position = "bottom"
+    # plot.margin = margin(5.5, 100, 5.5, 5.5), # increase right margin
+    legend.position = "none"
   ) +
   coord_cartesian(clip = "off")  # ensures labels beyond plot area are visible
+
+
+
+
+N_plot<-ggplot(females_over_time, aes(x = t, y = N, group = alt, color = factor(alt))) +
+  geom_ribbon(
+    aes(ymin = N_lcl, ymax = N_ucl, fill = factor(alt)),
+    alpha = 0.2,       # transparency of the ribbon
+    color = NA          # no border line on ribbon
+  ) +
+  geom_line(alpha = 1,lwd=1) +
+  geom_text_repel(
+    data = last_points_N,
+    aes(label = egg_harvest_desc),
+    color = "black",
+    size = 3,
+    direction = "y",      # keeps labels spread vertically
+    hjust = 0,            # align to the right of points
+    nudge_x = 1,          # move labels a bit to the right
+    segment.color = "grey50",  # line color
+    segment.size = 0.3,        # line thickness
+    box.padding = 0.4,
+    point.padding = 0.2,
+    show.legend = FALSE
+  ) +
+  facet_grid(admix_desc~field,scales = "fixed")+
+  labs(
+    title = "Population Size over Time by Alternative",
+    x = "Time (t)",
+    y = "Persistence",
+    color = "Alternative"
+  ) +
+  theme_minimal() +
+  scale_color_viridis_d() +
+  scale_fill_viridis_d() +
+  theme(
+    # plot.margin = margin(5.5, 100, 5.5, 5.5), # increase right margin
+    legend.position = "none"
+  ) +
+  coord_cartesian(clip = "off")  # ensures labels beyond plot area are visible
+
 
 resu<-left_join(summary,run_pars%>%select(i,alt,p))
 
