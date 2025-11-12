@@ -59,8 +59,8 @@ prior_rng$admix_effect_imm_surv <-
 # NOTE: This line uses *juvenile* mixed-offspring for adult survival effect.
 # If unintended, consider qFUN$`adu_survival_Mixed offspring` here.
 prior_rng$admix_effect_adu_surv <-
-  logit(qFUN$`juv_survival_Mixed offspring`(prior_rng$Q_juv_surv_gen, n_samples = n_samples_mc)) -
-  logit(qFUN$elicit_juv_surv_anchor        (prior_rng$Q_juv_surv_gen))
+  logit(qFUN$`adu_survival_Mixed offspring`(prior_rng$Q_adu_surv_gen, n_samples = n_samples_mc)) -
+  logit(qFUN$elicit_adu_surv_anchor        (prior_rng$Q_adu_surv_gen))
 
 prior_rng$admix_effect_cs <-
   log(qFUN$`clutch_size_Mixed offspring`(prior_rng$Q_clutch_size_gen, n_samples = n_samples_mc)) -
