@@ -1,13 +1,8 @@
-wd<-"~/TaraItiIBM"
+wd <- "/kenup/TaraItiIBM"                      # preferred working directory
 
-if(!dir.exists(wd)){
-  wd<-"D:/03-Work/01-Science/00-Research Projects/Tara Iti/TaraItiIBM"
-  
-}
-if(!dir.exists(wd)){
-  wd<-"C:/Users/Caio.Kenup/TaraItiIBM"
-  
-}
+# Fallback working directories for different machines
+if (!dir.exists(wd)) { wd <- "D:/03-Work/01-Science/00-Research Projects/Tara Iti/TaraItiIBM" }
+if (!dir.exists(wd)) { wd <- "C:/Users/Caio.Kenup/TaraItiIBM" }
 setwd(wd)
 
 source("RunningModels.R")
