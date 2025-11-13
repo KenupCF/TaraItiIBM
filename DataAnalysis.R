@@ -222,7 +222,7 @@ pars2<-run_pars%>%filter(!duplicated(p))%>%
          Juv_survival_ai=`Phi:(Intercept)`+`Phi:age_classjuv:NewMgmtTRUE`+ai_effect_juv_surv,
          
          Hatch_prob_managed_eggs=hatch_prob_coeff_intercept+hatch_prob_coeff_managed+(hatch_prob_coeff_clutch_no*1)+hatch_prob_coeff_sq,
-         Hatch_prob_managed_eggs_field2=Hatch_prob_managed_eggs-hatch_prob_coeff_sq+field2_effect_hatch_prob,
+         Hatch_prob_managed_eggs_field2=hatch_prob_coeff_intercept+hatch_prob_coeff_managed+(hatch_prob_coeff_clutch_no*1)+field2_effect_hatch_prob,
          Hatch_prob_managed_eggs_admix=Hatch_prob_managed_eggs+admix_effect_hatch_prob,
          Hatch_prob_managed_eggs_ai_parents=Hatch_prob_managed_eggs+ai_effect_hatch_prob,
          
