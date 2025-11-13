@@ -137,7 +137,7 @@ N_plot<-ggplot(females_over_time, aes(x = t, y = N, group = alt, color = factor(
   labs(
     title = "Population Size over Time by Alternative",
     x = "Time (t)",
-    y = "Persistence",
+    y = "Number of Females",
     color = "Alternative"
   ) +
   theme_minimal() +
