@@ -77,6 +77,7 @@ model_pars$bio$surv_coeff <-
     'RE_time' = model_pars$bio$re_surv_temp
   )
 
+# cat()
 
 model_pars$bio$ai_hatch_prob<-all_iterations$ai_hatch_prob[i]
 model_pars$bio$ai_fledge_prob<-all_iterations$ai_fledge_prob[i]
@@ -94,11 +95,8 @@ model_pars$mgmt$admix_prop_released<-all_iterations$admix_prop_released[i]
 model_pars$mgmt$admix_age_released<-all_iterations$admix_age_released[i]
 model_pars$mgmt$admix_no_released<-all_iterations$admix_no_released[i]
 
-
 model_pars$mgmt$admix_release_freq<-all_iterations$admix_release_freq[i]
 model_pars$mgmt$admix_total_releases<-all_iterations$admix_total_releases[i]
-
-
 model_pars$mgmt$gen_mgmt<-all_iterations$gen_mgmt[i]
 
 
