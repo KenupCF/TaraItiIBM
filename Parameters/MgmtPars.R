@@ -8,7 +8,7 @@ model_pars$mgmt$strategies <- expand.grid(
   egg_harvest_rate = c(0, 0.1, 0.5, 1),  # proportion of eggs harvested for ex-situ or head-starting
   admix_releases   = c(FALSE, TRUE),      # whether admixed individuals (from external population) are released
   admix_release_freq = 3,
-  admix_total_releases = 5,
+  admix_total_releases = 10,
   admix_prop_released = 0.2,              # proportion of released individuals that are admixed
   admix_age_released  = 2,                # age (years) at which admixed individuals are released
   admix_no_released   = 6,                # number of individuals released per event
