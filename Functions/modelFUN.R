@@ -45,7 +45,21 @@ run_model<-function(start_conditions,model_pars,idx=NA){
   
   if (bin_adm_rel == 0) { year_adm_rel <- Inf }        # never occurs if draw is zero
   # Logical vector of years where admix releases occur
-  pars$admix_release_years <- round(pmin(1, pmax(0, (1:n_years) - year_adm_rel + 1))) == 1
+  
+  years<-1:n_years
+  candidate <- years >= year_adm_rel &
+    ((years - year_adm_rel) %% model_pars$mgmt$admix_release_freq == 0)
+  # Keep only the first 'max_number' TRUEs
+  idx <- which(candidate)
+  if (length(idx) > max_number) {
+    idx <- idx[1:model_pars$mgmt$admix_total_releases]
+  }
+  release_vec <- rep(0, n_years)
+  release_vec[idx] <- 1
+
+  
+  # pars$admix_release_years <- round(pmin(1, pmax(0, (1:n_years) - year_adm_rel + 1))) == 1
+  pars$admix_release_years <- release_vec==1
   pars$admix_prop_released <- model_pars$mgmt$admix_prop_released
   pars$admix_age_released  <- model_pars$mgmt$admix_age_released
   pars$admix_no_released   <- model_pars$mgmt$admix_no_released
