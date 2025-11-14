@@ -99,7 +99,8 @@ source("./Parameters/priorHandling.R")
 
 # Cross product of parameter draws p with management strategies alt
 all_iterations <- merge(prior_rng, model_pars$mgmt$strategies) %>%
-  dplyr::arrange(p, alt) %>%
+  merge(sensitivity_analysis)%>%
+  dplyr::arrange(p, alt, q) %>%
   dplyr::mutate(
     i = (1:n()) + model_pars$sim$idx_add,  # unique iteration id
     Label = runLabel
@@ -343,3 +344,4 @@ if (model_pars$sim$parallel_across_runs) {
     save(output, file = filename_output)
   }
 }
+
