@@ -50,12 +50,12 @@ run_model<-function(start_conditions,model_pars,idx=NA){
   candidate <- years >= year_adm_rel &
     ((years - year_adm_rel) %% model_pars$mgmt$admix_release_freq == 0)
   # Keep only the first 'max_number' TRUEs
-  idx <- which(candidate)
-  if (length(idx) > model_pars$mgmt$admix_total_releases) {
-    idx <- idx[1:model_pars$mgmt$admix_total_releases]
+  idx_t <- which(candidate)
+  if (length(idx_t) > model_pars$mgmt$admix_total_releases) {
+    idx_t <- idx_t[1:model_pars$mgmt$admix_total_releases]
   }
   release_vec <- rep(0, n_years)
-  release_vec[idx] <- 1
+  release_vec[idx_t] <- 1
 
   
   # pars$admix_release_years <- round(pmin(1, pmax(0, (1:n_years) - year_adm_rel + 1))) == 1
