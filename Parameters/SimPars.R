@@ -5,6 +5,7 @@
 model_pars$sim <- list()
 
 model_pars$sim$use_genetics <- TRUE        # toggle genetics submodel on/off
+model_pars$sim$sensitivity_analysis <- TRUE        # toggle genetics submodel on/off
 
 model_pars$sim$n_years <- 50               # years per simulation run
 model_pars$sim$n_iter  <- 1e3              # number of replicate runs
@@ -41,10 +42,16 @@ if (model_pars$sim$parametric_uncertainty) {
 qFUN <- agg_info$LP$mc_q_functions
 
 
-sensitivity_analysis<-expand.grid(ad_fem_removed=c(0,2,4,8),ad_mal_removed=c(0,2,4,8))%>%
+sensitivity_analysis<-expand.grid(ad_fem_removed=c(0,2,4,8),
+                                  ad_mal_removed=c(0,2,4,8))%>%
   dplyr::filter((ad_fem_removed==ad_mal_removed)| ad_fem_removed==0)%>%
   dplyr::mutate(q=1:n())
 
+if(!model_pars$sim$sensitivity_analysis){
+  
+  sensitivity_analysis<-sensitivity_analysis[1,]
+  
+}
 
 # ============================
 # Structure of priors for Q-draws
