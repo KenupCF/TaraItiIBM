@@ -40,6 +40,12 @@ if (model_pars$sim$parametric_uncertainty) {
 # Quantile function library (precomputed MC quantile functions)
 qFUN <- agg_info$LP$mc_q_functions
 
+
+sensitivity_analysis<-expand.grid(ad_fem_removed=c(0,2,4,8),ad_mal_removed=c(0,2,4,8))%>%
+  dplyr::filter((ad_fem_removed==ad_mal_removed)| ad_fem_removed==0)%>%
+  dplyr::mutate(q=1:n())
+
+
 # ============================
 # Structure of priors for Q-draws
 # Each Q_* is a uniform on [min,max] over the probability (quantile) space,
