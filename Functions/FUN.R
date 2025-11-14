@@ -3,7 +3,8 @@ init_population <- function(pars, seed = 19) {
   require(dplyr)
   
   # Validate required parameters
-  needed_pars <- c("StartN_df", "sex_ratio", "no_age_classes", "Fp", "age_structure")
+  needed_pars <- c("StartN_df", "sex_ratio", "no_age_classes", "Fp", 
+                   "age_structure","fems_to_rm","mals_to_rm")
   par_names <- names(pars)
   missing_pars <- needed_pars[which(!needed_pars %in% par_names)]
   if (length(missing_pars) > 0) {
@@ -16,6 +17,13 @@ init_population <- function(pars, seed = 19) {
   
   # Remove zero rows from starting counts
   pars$StartN_df <- pars$StartN_df %>% filter(count > 0)
+  # pars$StartN_df<-pars$StartN_df%>%
+  #   dplyr::group_by(sex)%>%
+  #   dplyr::mutate(rm_weight= (count*(age_class>=pars$breeding_age))/sum((count*(age_class>=pars$breeding_age))))
+  # 
+  # N_split<-split(pars$StartN_df,pars$StartN_df$sex)
+  # 
+  
   
   # Build initial individuals per row of StartN_df
   for (i in seq_along(pars$StartN_df[, 1])) {
@@ -44,6 +52,12 @@ init_population <- function(pars, seed = 19) {
       year_born = age - t,
       subpop = "A"
     )
+  
+  fems_to_rm<-sample(pop%>%filter(sex=="F",age>=pars$breeding_age)%>%pull(id),size = pars$fems_to_rm,replace = F)
+  mals_to_rm<-sample(pop%>%filter(sex=="M",age>=pars$breeding_age)%>%pull(id),size = pars$mals_to_rm,replace = F)
+  
+  pop<-pop%>%
+    dplyr::filter(!id%in%c(fems_to_rm,mals_to_rm))
   
   return(pop)
 }

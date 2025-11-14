@@ -100,6 +100,8 @@ model_pars$mgmt$admix_total_releases<-all_iterations$admix_total_releases[i]
 model_pars$mgmt$gen_mgmt<-all_iterations$gen_mgmt[i]
 
 
+init_pars$fems_to_rm<-all_iterations$ad_fem_removed[i]
+init_pars$mals_to_rm<-all_iterations$ad_mal_removed[i]
 
 
 
