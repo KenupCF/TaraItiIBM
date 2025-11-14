@@ -19,7 +19,7 @@ model_pars$sim$n_samples_quantile_function <- 1e4  # samples to build/approx qua
 model_pars$sim$idx_add <- 0                # optional offset to tag replicate indices
 
 # Parallelization settings
-model_pars$sim$parallel_across_runs <- TRUE
+model_pars$sim$parallel_across_runs <- F
 model_pars$sim$clusters_to_run      <- min(64, parallel::detectCores() - 2)  # safety margin: leave 2 cores idle
 model_pars$sim$batching_clusters    <- 64                                    # batch size for parallel work scheduling
 

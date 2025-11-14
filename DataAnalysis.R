@@ -19,7 +19,7 @@ require(RColorBrewer)
 require(colorspace)
 
 # Connect to DuckDB database
-db_path <- "D:/03-Work/01-Science/00-Research Projects/Tara Iti/TaraItiIBM/Results/bigRunV2/bigRunv2b.duckdb"
+db_path <- "D:/03-Work/01-Science/00-Research Projects/Tara Iti/TaraItiIBM/Results/bigRunV4/bigRunv4.duckdb"
 con <- dbConnect(duckdb::duckdb(), dbdir = db_path, read_only = FALSE)
 
 # Load tables from the DuckDB database
