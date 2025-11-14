@@ -622,7 +622,6 @@ releases <- function(pars, currentT) {
   
   releaseYears <- which(pars$admix_release_years)
   
-  if (currentT %in% releaseYears & pars$admix_no_released > 0) {
     # Build release cohort
     released <- data.frame(
       id   = generate_unique_ids(n = pars$admix_no_released, existing = pars$all_ids),
