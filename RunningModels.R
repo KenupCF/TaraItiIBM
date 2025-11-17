@@ -2,7 +2,7 @@
 # Master run script
 # ============================
 
-runLabel <- "bigRunV6_SensAnal_RateTracking"                    # label for this run (used in outputs and sheet)
+runLabel <- "bigRunV6"                    # label for this run (used in outputs and sheet)
 # runLabel <- "foo"                    # label for this run (used in outputs and sheet)
 get_runs_from_gsheet <- FALSE             # pull scheduled runs from Google Sheet
 replace_runs_gsheet   <- FALSE            # overwrite Google Sheet "Runs" tab with computed runs
