@@ -12,6 +12,7 @@
 # ------------------------------------------------------------------------------
 # load data --------------------------------------------------------------------
 # ------------------------------------------------------------------------------
+options(warn = 1)   # show warnings normally
 
 
 egg_data_analysis<-list(priors=list(),bio=list())
@@ -33,7 +34,7 @@ NZFT <- read.csv("./Data/egg_level_data_2000_2024.csv")
 min_year <- 2010
 
 years_cov<-data.frame(season=min_year:2025)%>%
-  mutate(NewMgmt=factor(season%in%2021:2025),year=season)
+  dplyr::mutate(NewMgmt=factor(season%in%2021:2025),year=season)
 
 
 # ------------------------------------------------------------------------------
@@ -41,8 +42,8 @@ years_cov<-data.frame(season=min_year:2025)%>%
 # ------------------------------------------------------------------------------
 
 NZFT <- NZFT %>%
-  mutate(year = as.numeric(str_extract(season, "\\d{4}"))) %>% 
-  filter(year >= min_year)
+  dplyr::mutate(year = as.numeric(str_extract(season, "\\d{4}"))) %>% 
+  dplyr::filter(year >= min_year)
 
 NZFT <-  NZFT %>%
   dplyr::select(season, nest_id, egg_id, clutch_no, total_eggs_clutch, fertile,
@@ -63,10 +64,10 @@ NZFT$natalsite[NZFT$natalsite == "Waip?"] = "Waipu"
 f_age = scale(as.integer(NZFT$f_age))
 
 NZFT_2 <- NZFT %>%
-  mutate(fertile = ifelse(fertile == "unknown", NA, fertile),
+  dplyr::mutate(fertile = ifelse(fertile == "unknown", NA, fertile),
          fertile = as.integer(fertile)) %>%
-  filter(!nest_id %in% c("288", "287")) %>%
-  mutate(clutch_no = as.numeric(clutch_no),
+  dplyr::filter(!nest_id %in% c("288", "287")) %>%
+  dplyr::mutate(clutch_no = as.numeric(clutch_no),
          nest_id = as.factor(as.integer(nest_id)),
          f_age = f_age,
          man = as.factor(ifelse(egg_managed == "none", "n", "y")),
