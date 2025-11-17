@@ -19,7 +19,10 @@ require(RColorBrewer)
 require(colorspace)
 
 # Connect to DuckDB database
-db_path <- "D:/03-Work/01-Science/00-Research Projects/Tara Iti/TaraItiIBM/Results/bigRunV4/bigRunv4.duckdb"
+db_path <- "D:/03-Work/01-Science/00-Research Projects/Tara Iti/TaraItiIBM/Results/bigRunV5/bigRunv5.duckdb"
+
+db_path <- "D:/03-Work/01-Science/00-Research Projects/Tara Iti/TaraItiIBM/Results/Sensitivity_Analysis/Sensitivity_Analysis.duckdb"
+
 con <- dbConnect(duckdb::duckdb(), dbdir = db_path, read_only = FALSE)
 
 # Load tables from the DuckDB database
@@ -47,41 +50,65 @@ mgmt<-run_pars%>%
   dplyr::mutate(admix_desc=case_when(admix_releases==FALSE~"No admixing",
                                      admix_releases==TRUE~"Admixing"))
 
-pop<-pop%>%left_join(run_pars%>%select(i,alt,p))
+sensit<-run_pars%>%
+  dplyr::select(q,ad_fem_removed,ad_mal_removed)%>%
+  dplyr::filter(!duplicated(q))
 
+pop<-pop%>%
+  dplyr::left_join(run_pars%>%select(i,alt,p,q))
 
-persistence_over_time<-pop%>%
-  dplyr::select(t,alt,p,N)%>%
-  tidyr::complete(t,alt,p,fill=list(N=0))%>%
-  dplyr::group_by(alt,t)%>%
-  dplyr::summarise(Persistence=mean(! N<=2))%>%
-  dplyr::left_join(mgmt)
+pop_abund_names<-colnames(pop)
+pop_abund_names<-pop_abund_names[!pop_abund_names%in%c("folder","filename","alt","p","t","i","q","Fp","Kp")]
 
+fill_list<-lapply(pop_abund_names,function(x){0})
+names(fill_list)<-pop_abund_names
 
-females_over_time<-pop%>%
-  dplyr::select(t,alt,p,N)%>%
-  tidyr::complete(t,alt,p,fill=list(N=0))%>%
-  dplyr::group_by(alt,t)%>%
-  dplyr::summarise(N_lcl=quantile(N,1-.975),N_ucl=quantile(N,.975),N=mean(N))%>%
-  dplyr::left_join(mgmt)
-  
-library(ggplot2)
-library(ggrepel)
+filled_pop <- pop %>%
+  dplyr::select(t, alt, p, q, dplyr::any_of(names(fill_list))) %>%
+  tidyr::complete(t, alt, p, q, fill = fill_list)%>%
+  # dplyr::left_join(run_pars%>%
+                     # select(alt,q,p,K))
+  dplyr::mutate(Occupancy=BreedingPairs/100)
+
+persistence_over_time<-filled_pop%>%
+  dplyr::group_by(alt,q,t)%>%
+  dplyr::summarise(Persistence=mean(BreedingPairs>2))%>%
+  dplyr::left_join(mgmt)%>%
+  dplyr::left_join(sensit)
+
+abundance_over_time<-filled_pop%>%
+  tidyr::pivot_longer(
+    cols = c(dplyr::all_of(names(fill_list)), Occupancy),
+    names_to = "Class",
+    values_to = "count"
+  )%>%
+  dplyr::group_by(alt,t,q,Class)%>%
+  dplyr::summarise(median=quantile(count,.5),av=mean(count),
+                   lcl50=quantile(count,1-.75),ucl50=quantile(count,.75),
+                   lcl90=quantile(count,1-.95),ucl90=quantile(count,.95),
+                   lcl95=quantile(count,1-.975),ucl95=quantile(count,.975),
+                   foo=0)%>%
+  dplyr::mutate(foo=NULL)%>%
+  dplyr::left_join(mgmt)%>%
+  dplyr::left_join(sensit)
+
 
 last_points <- persistence_over_time %>%
-  group_by(alt) %>%
-  filter(t == max(t)) %>%
+  # group_by(alt,q) %>%
+  dplyr::filter(t == max(t)) %>%
   ungroup()
 
-last_points_N <- females_over_time %>%
-  group_by(alt) %>%
-  filter(t == max(t)) %>%
-  ungroup()
+last_points_N <- abundance_over_time %>%
+  dplyr::ungroup()%>%
+  dplyr::filter(t == max(t))
 
-persist_plot<-ggplot(persistence_over_time, aes(x = t, y = Persistence, group = alt, color = factor(alt))) +
+persist_plot<-ggplot(data=persistence_over_time%>%
+                       dplyr::filter(q==1),
+                     aes(x = t, y = Persistence, group = alt, color = factor(alt))) +
   geom_line(alpha = 1,lwd=1) +
   geom_text_repel(
-    data = last_points,
+    data = last_points%>%
+      dplyr::filter(q==1),
     aes(label = egg_harvest_desc),
     color = "black",
     size = 3,
@@ -111,16 +138,24 @@ persist_plot<-ggplot(persistence_over_time, aes(x = t, y = Persistence, group = 
 
 
 
+classes<-c("N","BreedingPairs","AdultFemales")
 
-N_plot<-ggplot(females_over_time, aes(x = t, y = N, group = alt, color = factor(alt))) +
+
+N_plots<-list()
+
+for(cl in classes){
+
+N_plots[[cl]]<-ggplot(abundance_over_time%>%
+                 dplyr::filter(q==1,Class==cl), aes(x = t, y = median, group = alt, color = factor(alt))) +
   geom_ribbon(
-    aes(ymin = N_lcl, ymax = N_ucl, fill = factor(alt)),
+    aes(ymin = lcl95, ymax = ucl95, fill = factor(alt)),
     alpha = 0.2,       # transparency of the ribbon
     color = NA          # no border line on ribbon
   ) +
   geom_line(alpha = 1,lwd=1) +
   geom_text_repel(
-    data = last_points_N,
+    data = last_points_N%>%
+      dplyr::filter(q==1,Class==cl),
     aes(label = egg_harvest_desc),
     color = "black",
     size = 3,
@@ -137,7 +172,7 @@ N_plot<-ggplot(females_over_time, aes(x = t, y = N, group = alt, color = factor(
   labs(
     title = "Population Size over Time by Alternative",
     x = "Time (t)",
-    y = "Number of Females",
+    y = cl,
     color = "Alternative"
   ) +
   theme_minimal() +
@@ -149,17 +184,19 @@ N_plot<-ggplot(females_over_time, aes(x = t, y = N, group = alt, color = factor(
   ) +
   coord_cartesian(clip = "off")  # ensures labels beyond plot area are visible
 
+}
 
 resu<-left_join(summary,run_pars%>%select(i,alt,p))
 
 resu_summary<-resu%>%
-  group_by(alt)%>%
-  summarise(probExt=mean(extinct),avTrend=mean(trend),
+  dplyr::group_by(alt)%>%
+  dplyr::summarise(probExt=mean(extinct),avTrend=mean(trend),
             avN=mean(finalN),
             sdN=sd(finalN),
             avFp=mean(Fp),
             avKp=mean(Kp))%>%
-  left_join(mgmt)
+  dplyr::left_join(mgmt)%>%
+  dplyr::left_join(sensit)
 
 # Summarise results by strategy, habitat and feeding
 resu <- summary %>%
@@ -260,9 +297,6 @@ pars2[,logit_pars]<-apply(pars2[,logit_pars],2,inv.logit)
 pars2[,log_pars]<-apply(pars2[,log_pars],2,exp)
 
 pars3<-pars2[,new_par_names]
-
-
-
 
 summary_df <- pars3 %>%
   summarise(across(

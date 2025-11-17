@@ -13,10 +13,13 @@ source(".\\Functions\\FUN.R")
 # =======================
 # SETUP
 # =======================
-folder_extr <- "D:\\03-Work\\01-Science\\00-Research Projects\\Tara Iti\\TaraItiIBM\\Results\\bigRunV4"
+
+folder_extr <- "D:\\03-Work\\01-Science\\00-Research Projects\\Tara Iti\\TaraItiIBM\\Results\\Sensitivity_Analysis"
+
+
 folderID    <- gsub(x = folder_extr, "^.*/", "")   # Extract last path segment as a folder label
-loopSize    <- 12e3                                  # Max number of files to attempt per run
-time_limit_secs <- 60*60*(20/60)                  # time limit in seconds
+loopSize    <- 35e3                                  # Max number of files to attempt per run
+time_limit_secs <- 60*60*(60/60)                  # time limit in seconds
 buffer_size <- 25                                   # Number of records to batch-write into DuckDB
 
 # =======================
@@ -49,7 +52,7 @@ files_df <- files_df %>% filter(!duplicated(i))
 # Connect to DuckDB
 # =======================
 
-db_path <- paste0(folder_extr, "\\bigRunV4.duckdb")
+db_path <- paste0(folder_extr, "\\Sensitivity_Analysis.duckdb")
 con <- dbConnect(duckdb::duckdb(), dbdir = db_path, read_only = FALSE)
 
 # Find which i have already been imported for this folder
