@@ -2,7 +2,7 @@
 # Master run script
 # ============================
 
-runLabel <- "bigRunV4_betterReleases"                    # label for this run (used in outputs and sheet)
+runLabel <- "sensitivityAnalysis_N_SexRatio"                    # label for this run (used in outputs and sheet)
 get_runs_from_gsheet <- FALSE             # pull scheduled runs from Google Sheet
 replace_runs_gsheet   <- FALSE            # overwrite Google Sheet "Runs" tab with computed runs
 prior_rng_seed <- 1e3                     # base seed for prior sampling per p

@@ -33,8 +33,9 @@ dplyr::filter(!(field == "Field2" & gen_mgmt)) %>%
   dplyr::filter(!(admix_releases & egg_harvest_rate >= 0.5)) %>%
   
   # (optional filters left commented: could restrict more)
-  # dplyr::filter(!(field == "Field2" & admix_releases))
-  # dplyr::filter(!(field == "Field2" & egg_harvest_rate != min(egg_harvest_rate)))
+  dplyr::filter(!(field == "Field2" & admix_releases))%>%
+  dplyr::filter(egg_harvest_rate>0)%>%
+  dplyr::filter(!(field == "Field2" & egg_harvest_rate > 0.1))%>%
   
   ungroup() %>%
   
