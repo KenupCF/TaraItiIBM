@@ -819,28 +819,47 @@ process_result_file <- function(filename, folder_id) {
       )
     
     # Total N series by replicate
-    N_df <- output$pop %>%
-      dplyr::group_by(t, i) %>%
-      dplyr::summarise(
-        N  = sum(alive),
-        Fp = sum(Fi * alive) / sum(alive),
-        Kp = sum(nz_heritage * alive) / sum(alive),
-        .groups = "drop"
-      )
+    # N_df <- output$pop %>%
+    #   dplyr::group_by(t, i) %>%
+    #   dplyr::summarise(
+    #     TotalN  = sum(alive),
+    #     # Fp = sum(Fi * alive) / sum(alive),
+    #     # Kp = sum(nz_heritage * alive) / sum(alive),
+    #     .groups = "drop"
+    #   )
     
     # Adult female series (age >= 3), used for trend & extinction metrics
     N_ad_fem_df <- output$pop %>%
       dplyr::filter(sex == "F", age >= 3) %>%
       dplyr::group_by(t, i) %>%
       dplyr::summarise(
-        N  = sum(alive),
+        AdultFemales  = sum(alive),
         Fp = sum(Fi * alive) / sum(alive),
         Kp = sum(nz_heritage * alive) / sum(alive),
         .groups = "drop"
       )
     
-    # Multiplicative growth rate lambda and its geometric mean
-    Ns <- dplyr::pull(N_ad_fem_df, N)
+    
+    N_df <- output$pop %>%
+      dplyr::group_by(t, i) %>%
+      dplyr::summarise(
+        N = sum(alive),
+        BreedingPairs    = sum(alive & sex == "F" & age >= 3 & !is.na(pair)),
+        AdultMales       = sum(alive & sex == "M" & age >= 3),
+        UnpairedMales    = sum(alive & sex == "M" & age >= 3 & is.na(pair)),
+        UnpairedFemales  = sum(alive & sex == "F" & age >= 3 & is.na(pair)),
+        Immatures        = sum(alive & age == 2),
+        Juveniles        = sum(alive & age == 1),
+        # Fp = sum(Fi * alive) / sum(alive),
+        # Kp = sum(nz_heritage * alive) / sum(alive),
+        .groups = "drop"
+      ) %>%
+      dplyr::left_join(N_ad_fem_df)
+    
+    
+    
+    # Finite rate of increase lambda and its geometric mean
+    Ns <- dplyr::pull(N_ad_fem_df, AdultFemales)
     Ns_2 <- Ns
     if (dplyr::last(Ns_2) == 0) Ns_2 <- Ns_2[-length(Ns_2)]  # avoid trailing zero
     lambda <- (Ns_2[-1]) / (Ns_2[-length(Ns_2)])
