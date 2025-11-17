@@ -145,7 +145,18 @@ mortality <- function(pop, currentT, pars, seed = 19) {
     ) %>%
     tidy_pop_df()
   
-  resu <- list(alive = current, stoch_q = q_sample)
+  surv_rate<-current%>%
+    dplyr::mutate(age_class=case_when(
+      age==1~"juv",
+      age==2~"imm",
+      age>2 & sex=="F"~"ad_fem",
+      age>2 & sex=="M"~"ad_mal",
+      TRUE ~ NA
+    ))%>%
+    dplyr::group_by(age_class)%>%
+    dplyr::summarise(surv_rate=mean(alive))
+
+  resu <- list(alive = current, stoch_q = q_sample,surv_rate=surv_rate)
   return(resu)
 }
 
@@ -318,6 +329,7 @@ recruitment <- function(pop, currentT, pars, seed = 19, envir_stoch = TRUE, star
       identity()
     
     reproducing$cs <- brood_size
+
     no_eggs <- pmin(sapply(reproducing$cs, function(x) rpois(n = 1, lambda = x)), pars$max_brood_size)
     
     # Expand mother and father ids for each egg
@@ -793,6 +805,8 @@ process_result_file <- function(filename, folder_id) {
     
     # Truncate series prior to extinction time (keeps NA -> no truncation)
     output$pop         <- output$pop         %>% dplyr::filter(t < zeroN)
+    
+    
     # output$egg_fate  <- output$egg_fate    %>% dplyr::filter(t < zeroN)
     output$envir_stoch <- output$envir_stoch %>% dplyr::filter(t < zeroN)
     
@@ -817,17 +831,7 @@ process_result_file <- function(filename, folder_id) {
         Kp = sum(Kp * Nw),
         Fp = sum(Fp * Nw)
       )
-    
-    # Total N series by replicate
-    # N_df <- output$pop %>%
-    #   dplyr::group_by(t, i) %>%
-    #   dplyr::summarise(
-    #     TotalN  = sum(alive),
-    #     # Fp = sum(Fi * alive) / sum(alive),
-    #     # Kp = sum(nz_heritage * alive) / sum(alive),
-    #     .groups = "drop"
-    #   )
-    
+
     # Adult female series (age >= 3), used for trend & extinction metrics
     N_ad_fem_df <- output$pop %>%
       dplyr::filter(sex == "F", age >= 3) %>%
@@ -889,7 +893,7 @@ process_result_file <- function(filename, folder_id) {
   # Pack outputs
   resu <- list(
     summary  = summ,
-    N_series = N_ad_fem_df,
+    N_series = N_df,
     # egg_fate = egg_fate,
     mgmt     = mgmt,
     run_pars = as.data.frame(run_pars)

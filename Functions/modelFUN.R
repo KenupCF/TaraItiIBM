@@ -82,8 +82,9 @@ run_model<-function(start_conditions,model_pars,idx=NA){
     dplyr::select(id, Fi, nz_heritage)      # keep relevant genetic cols
   
   # Containers to store outputs across years ----------------------------------
-  egg_fate   <- data.frame()                 # currently unused, left for future
+  reprod_pars   <- data.frame()                 # currently unused, left for future
   envir_stoch <- data.frame()                # to record stochastic draws
+  surv_rate<- data.frame()
   
   j <- 1                                     # simulation year counter
   
@@ -121,6 +122,10 @@ run_model<-function(start_conditions,model_pars,idx=NA){
         data.frame(par = "survival", q = survival_outcome$stoch_q, t = j)
       )
       
+      surv_rate <- plyr::rbind.fill(surv_rate,
+                                    survival_outcome$surv_rate%>%
+                                      dplyr::mutate(t=j))
+      
       currentPop1 <- survival_outcome$alive
       
       # Update pairings if one partner died -----------------------------------
@@ -131,6 +136,16 @@ run_model<-function(start_conditions,model_pars,idx=NA){
       
       # Recruitment and reproduction ------------------------------------------
       born_resu <- recruitment(pop = currentPop3, currentT = j, pars = pars)
+      
+      
+      reprod_pars<-plyr::rbind.fill(reprod_pars,
+                                    data.frame(fem_breeding=born_resu$females_breeding,
+                                               harvested_eggs=nrow(born_resu$harvested_eggs),
+                                               eggs_laid=born_resu$eggs_laid,
+                                               eggs_hatched=born_resu$eggs_hatched,
+                                               fledged=born_resu$fledged,
+                                               t=j))
+      
       
       # Update ID registry with newly born individuals
       pars$all_ids <- unique(c(pars$all_ids, pars$full_pop$id, born_resu$born$id))
@@ -147,7 +162,7 @@ run_model<-function(start_conditions,model_pars,idx=NA){
       # Combine adults and new recruits, then age everyone ---------------------
       currentPop4 <- plyr::rbind.fill(currentPop3, born_resu$born, ai_recruits) %>%
         aging(currentT = j, pars = pars)
-      
+
       # Append this year to the main population time series and tidy ----------
       pop <- plyr::rbind.fill(pop, currentPop4) %>% tidy_pop_df()
       
@@ -183,7 +198,8 @@ run_model<-function(start_conditions,model_pars,idx=NA){
     envir_stoch = envir_stoch,
     # kinship   = kinship,
     pars       = pars,
-    # egg_fate = egg_fate %>% dplyr::mutate(i = idx),
+    surv_rate = surv_rate %>% dplyr::mutate(i = idx),
+    reprod_pars = reprod_pars %>% dplyr::mutate(i = idx),
     model_pars = model_pars,
     time_run   = difftime(time1 = now(), time2 = start., units = "secs")
   ))
