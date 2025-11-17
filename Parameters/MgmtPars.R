@@ -21,7 +21,7 @@ model_pars$mgmt$strategies <- expand.grid(
 # Logical filtering of infeasible or undesired combinations
 # ============================
 # Remove any combination where Field2 uses gen_mgmt
-dplyr::filter(!(field == "Field2" & gen_mgmt)) %>%
+# dplyr::filter(!(field == "Field2" & gen_mgmt)) %>%
   
   # Remove combinations where both admixture releases and genetic management occur simultaneously
   dplyr::filter(!(admix_releases & gen_mgmt)) %>%
@@ -30,12 +30,13 @@ dplyr::filter(!(field == "Field2" & gen_mgmt)) %>%
   dplyr::filter(!(gen_mgmt & egg_harvest_rate >= 0.5)) %>%
   
   # Remove cases where admixture releases coincide with high egg harvest (>= 0.5)
-  dplyr::filter(!(admix_releases & egg_harvest_rate >= 0.5)) %>%
+  # dplyr::filter(!(admix_releases & egg_harvest_rate >= 0.5)) %>%
   
   # (optional filters left commented: could restrict more)
-  dplyr::filter(!(field == "Field2" & admix_releases))%>%
-  dplyr::filter(egg_harvest_rate>0)%>%
-  dplyr::filter(!(field == "Field2" & egg_harvest_rate > 0.1))%>%
+  # dplyr::filter(!(field == "Field2" & admix_releases))%>%
+  # dplyr::filter(egg_harvest_rate>0)%>%
+  # dplyr::filter(!(field == "Field2" & egg_harvest_rate > 0.1))%>%
+  # dplyr::filter(!(field == "Field2" & egg_harvest_rate > 0.1))%>%
   
   ungroup() %>%
   

@@ -2,7 +2,8 @@
 # Master run script
 # ============================
 
-runLabel <- "sensitivityAnalysis_N_SexRatio"                    # label for this run (used in outputs and sheet)
+runLabel <- "bigRunV6_SensAnal_RateTracking"                    # label for this run (used in outputs and sheet)
+# runLabel <- "foo"                    # label for this run (used in outputs and sheet)
 get_runs_from_gsheet <- FALSE             # pull scheduled runs from Google Sheet
 replace_runs_gsheet   <- FALSE            # overwrite Google Sheet "Runs" tab with computed runs
 prior_rng_seed <- 1e3                     # base seed for prior sampling per p
@@ -297,7 +298,7 @@ if (model_pars$sim$parallel_across_runs) {
         output$run_label <- all_iterations$Label[i]
         
         # Persist result to disk
-        filename_output <- paste0("./Results/", output$run_label, "_Resu_", zero_pad(i, 5), ".RData")
+        filename_output <- paste0("./Results/", output$run_label, "_Resu_", zero_pad(i, 6), ".RData")
         save(output, file = filename_output)
         
         j <- j + 1

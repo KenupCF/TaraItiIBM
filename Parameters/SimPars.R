@@ -5,14 +5,14 @@
 model_pars$sim <- list()
 
 model_pars$sim$use_genetics <- TRUE        # toggle genetics submodel on/off
-model_pars$sim$sensitivity_analysis <- TRUE        # toggle genetics submodel on/off
+model_pars$sim$sensitivity_analysis <- FALSE        # toggle genetics submodel on/off
 
 model_pars$sim$n_years <- 50               # years per simulation run
 model_pars$sim$n_iter  <- 1e3              # number of replicate runs
 
 # Alternative quick test settings (kept for convenience)
-# model_pars$sim$n_years <- 15
-# model_pars$sim$n_iter  <- 3
+# model_pars$sim$n_years <- 10
+# model_pars$sim$n_iter  <- 2
 
 model_pars$sim$parametric_uncertainty <- TRUE   # draw parameters from priors (TRUE) vs fixed medians (FALSE)
 model_pars$sim$n_samples_quantile_function <- 1e4  # samples to build/approx quantile functions
@@ -20,7 +20,7 @@ model_pars$sim$n_samples_quantile_function <- 1e4  # samples to build/approx qua
 model_pars$sim$idx_add <- 0                # optional offset to tag replicate indices
 
 # Parallelization settings
-model_pars$sim$parallel_across_runs <- T
+model_pars$sim$parallel_across_runs <- FALSE
 model_pars$sim$clusters_to_run      <- min(96, parallel::detectCores() - 2)  # safety margin: leave 2 cores idle
 model_pars$sim$batching_clusters    <- 64                                    # batch size for parallel work scheduling
 
