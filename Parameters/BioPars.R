@@ -155,5 +155,9 @@ model_pars$bio$inherent$max_brood_p_year  <- 1
 model_pars$bio$inherent$max_prog_per_brood<- 2
 model_pars$bio$inherent$sex_ratio         <- 0.5
 
+
+model_pars$bio$catastrophe_probability <- 1/100
+
+
 # Survival coefficient random effect from analysis object
 model_pars$bio$re_surv_temp <- surv_data_analysis$bio$survival_coeff_temp_re

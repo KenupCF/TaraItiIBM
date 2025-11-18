@@ -12,8 +12,9 @@ model_pars$mgmt$strategies <- expand.grid(
   admix_prop_released = 0.2,              # proportion of released individuals that are admixed
   admix_age_released  = 2,                # age (years) at which admixed individuals are released
   admix_no_released   = 6,                # number of individuals released per event
-  gen_mgmt = c(FALSE                      # toggle for active genetic management
-               # , TRUE                    # (left commented: enable later if needed)
+  gen_mgmt = c(
+                # TRUE                      # toggle for active genetic management
+               FALSE , TRUE                    # (left commented: enable later if needed)
   ),
   field = c("SQ", "Field2")               # site/field conditions, “SQ” vs “Field2”
 ) %>%
@@ -27,7 +28,7 @@ model_pars$mgmt$strategies <- expand.grid(
   dplyr::filter(!(admix_releases & gen_mgmt)) %>%
   
   # Remove cases where genetic management is paired with high egg harvest (>= 0.5)
-  dplyr::filter(!(gen_mgmt & egg_harvest_rate >= 0.5)) %>%
+  dplyr::filter(!(gen_mgmt & egg_harvest_rate == 1)) %>%
   
   # Remove cases where admixture releases coincide with high egg harvest (>= 0.5)
   # dplyr::filter(!(admix_releases & egg_harvest_rate >= 0.5)) %>%
