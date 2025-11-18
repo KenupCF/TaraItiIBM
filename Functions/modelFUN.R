@@ -97,6 +97,9 @@ run_model<-function(start_conditions,model_pars,idx=NA){
       stoch$imm_surv<-stoch$adu_surv<-runif(n = 1,0,1)
       stoch$catastrophe<-rbinom(n = 1,size = 1,prob = model_pars$bio$catastrophe_probability)
       
+      if(stoch$catastrophe==1){
+        stoch$imm_surv<-stoch$adu_surv<-0.01
+      }
       
       pars$stoch<-stoch
       
