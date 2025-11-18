@@ -66,7 +66,7 @@ init_population <- function(pars, seed = 19) {
 mortality <- function(pop, currentT, pars, seed = 19) {
   
   # Validate required parameters
-  needed_pars <- c("phi_df", "max_age", "full_pop")
+  needed_pars <- c("phi_df", "max_age", "full_pop","stoch")
   par_names <- names(pars)
   missing_pars <- needed_pars[which(!needed_pars %in% par_names)]
   if (length(missing_pars) > 0) {
@@ -87,13 +87,17 @@ mortality <- function(pop, currentT, pars, seed = 19) {
     dplyr::mutate(AboveC = N > C, surv_trunc = 1 / (N / C))
   
   # Shared stochastic term (zeroed below)
-  q_sample <- runif(n = 1, min = 0, max = 1)
+  # q_sample <- runif(n = 1, min = 0, max = 1)
+  stoch<-pars$stoch
   
   # Intercept and optional variation
   surv_mean <- mean <- pars$phi_df$Intercept
   cyc_var <- 0
   sto_var <- sapply(seq_along(current$id), function(i) {
-    qnorm(p = q_sample, mean = 0, sd = pars$phi_df$RE_time)
+    qnorm(p = (stoch$juv_surv*(current$age[i]==1))+
+              (stoch$imm_surv*(current$age[i]==2))+
+              (stoch$imm_surv*(current$age[i]>=3)),
+          mean = 0, sd = pars$phi_df$RE_time)
   })
   surv_int <- surv_mean + sto_var + cyc_var
   
@@ -156,7 +160,9 @@ mortality <- function(pop, currentT, pars, seed = 19) {
     dplyr::group_by(age_class)%>%
     dplyr::summarise(surv_rate=mean(alive))
 
-  resu <- list(alive = current, stoch_q = q_sample,surv_rate=surv_rate)
+  resu <- list(alive = current, 
+               # stoch_q = q_sample,
+               surv_rate=surv_rate)
   return(resu)
 }
 
@@ -249,8 +255,8 @@ unpair_if_dead <- function(pop, currentT) {
 recruitment <- function(pop, currentT, pars, seed = 19, envir_stoch = TRUE, startAge = 0) {
   
   # Validate required parameters
-  needed_pars <- c("breeding_age", "fb_df", "cs_df", "hp_df", "fp_df",
-                   "sex_ratio", "max_brood_size",
+  needed_pars <- c("breeding_age", "fb_df", "cs_df", "hp_df", "fp_df","stoch",
+                   "sex_ratio", "max_brood_size","full_pop","genetic_management",
                    "first_clutch_harvest_prop", "prop_managed_clutches",
                    "carr_capac_df", "all_ids")
   par_names <- names(pars)
@@ -259,6 +265,7 @@ recruitment <- function(pop, currentT, pars, seed = 19, envir_stoch = TRUE, star
     stop(paste0("Error: Missing parameters are ", paste0(missing_pars, collapse = ", ")))
   }
   
+  stoch<-pars$stoch
   # Candidates of breeding pairs at current time
   temp <- pop %>%
     dplyr::filter(!is.na(pair), alive, t == currentT, age >= pars$breeding_age) %>%
@@ -304,16 +311,17 @@ recruitment <- function(pop, currentT, pars, seed = 19, envir_stoch = TRUE, star
   reproducing <- reproducing %>% dplyr::filter(breed)
   
   # Environmental stochastic quantile for random effects
-  if (envir_stoch) { q_sample <- runif(n = 1, min = 0, max = 1) } else { q_sample <- .5 }
+  # if (envir_stoch) { q_sample <- runif(n = 1, min = 0, max = 1) } else { q_sample <- .5 }
   
   if (nrow(reproducing) > 0) {
+    
     females_breeding <- nrow(reproducing)
     
     # Mean clutch size on log scale
     cs_mean <- pars$cs_df$Intercept
     pars$cs_df$RE_time <- 0
     cs_st_var <- sapply(seq_along(reproducing$id), function(i) {
-      qnorm(p = q_sample, mean = 0, sd = pars$cs_df$RE_time)
+      qnorm(p = stoch$cs, mean = 0, sd = pars$cs_df$RE_time)
     })
     cs_int <- cs_mean + cs_st_var
     
@@ -361,13 +369,46 @@ recruitment <- function(pop, currentT, pars, seed = 19, envir_stoch = TRUE, star
         year_born = currentT
       )
       
+      if(pars$genetic_management & (length(unique(eggs$mother_id)) > 1 )  ){
+      
+      alive_ids<-c(eggs$id, pop%>%filter(alive)%>%pull(id)  )
+        
+      temp_full_pop<-plyr::rbind.fill(eggs%>%mutate(newEgg=TRUE),pars$full_pop)%>%
+        dplyr::select(id,sex,mother_id,father_id,newEgg)
+      
+      K<-calculate_kinship(pop_df = temp_full_pop,pars = pars,rm_non_breeders = F)
+      
+      # cat("\n K is \n")
+      # cat(str(K))
+      
+      # cat("\n eggs is \n")
+      # cat(str(eggs))
+      # cat("\n")
+      eggs_by_uniqueness<-data.frame(k=rowMeans(K[eggs$id,alive_ids]),id=eggs$id)
+      
+      clutch_importance<-eggs_by_uniqueness%>%
+        dplyr::left_join(eggs)%>%
+        dplyr::filter(!duplicated(mother_id))%>%
+        dplyr::select(mother_id,k)%>%
+        dplyr::mutate(importance=((1/k)^3)/sum((1/k)^3))
+      
+      }else{
+        
+        clutch_importance<-eggs%>%
+          dplyr::filter(!duplicated(mother_id))%>%
+          dplyr::select(mother_id)%>%
+          dplyr::mutate(importance=1/n())
+        
+      }
+      
       # Add maternal covariates
       eggs$mother_origin <- (temp %>% pull_named(origin, id))[eggs$mother_id]
       eggs$mother_age    <- (temp %>% pull_named(age, id))[eggs$mother_id]
       
       # Harvest a proportion of first clutches for AI
       harvested_clutches_mom_id <- sample(
-        unique(eggs$mother_id),
+        (clutch_importance$mother_id),
+        prob = clutch_importance$importance,
         size = round(length(unique(eggs$mother_id)) * pars$first_clutch_harvest_prop),
         replace = FALSE
       )
@@ -382,14 +423,25 @@ recruitment <- function(pop, currentT, pars, seed = 19, envir_stoch = TRUE, star
         )
       
       # Assign managed clutches
-      clutches_ids <- unique(eggs$mother_id)
-      managed_clutches <- rbinom(n = length(clutches_ids), size = 1, prob = pars$prop_managed_clutches)
-      managed_clutches_ids <- clutches_ids[managed_clutches == 1]
+      
+      no_managed_clutches<-round(nrow(clutch_importance)*pars$prop_managed_clutches)
+      
+      managed_clutches_ids<-sample(clutch_importance$mother_id,
+                                   size = no_managed_clutches,
+                                   prob=clutch_importance$importance,
+                                   replace = F)
+      
+      # clutches_ids <- unique(eggs$mother_id)
+      # managed_clutches <- rbinom(n = length(clutches_ids), size = 1, prob = pars$prop_managed_clutches)
+      # managed_clutches_ids <- clutches_ids[managed_clutches == 1]
+      
+      
       eggs$managed <- eggs$mother_id %in% managed_clutches_ids
       
       # Hatch probability per egg
       hp_mean <- pars$hp_df$Intercept
-      hp_st_var <- sapply(seq_along(eggs$id), function(i) qnorm(p = q_sample, mean = 0, sd = pars$hp_df$RE_time))
+      hp_st_var <- sapply(seq_along(eggs$id), function(i) 
+        qnorm(p = stoch$hatch_prob, mean = 0, sd = pars$hp_df$RE_time))
       hp_int <- hp_mean + hp_st_var
       
       hatch_prob <- inv.logit(
@@ -414,7 +466,8 @@ recruitment <- function(pop, currentT, pars, seed = 19, envir_stoch = TRUE, star
         
         # Fledge probability per hatchling
         fp_mean <- pars$fp_df$Intercept
-        fp_st_var <- sapply(seq_along(hatchlings$id), function(i) qnorm(p = q_sample, mean = 0, sd = pars$fp_df$RE_time))
+        fp_st_var <- sapply(seq_along(hatchlings$id), function(i) 
+          qnorm(p = stoch$fledge_prob, mean = 0, sd = pars$fp_df$RE_time))
         fp_int <- fp_mean + fp_st_var
         
         fledge_prob <- inv.logit(
@@ -863,16 +916,39 @@ process_result_file <- function(filename, folder_id) {
     
     
     # Finite rate of increase lambda and its geometric mean
-    Ns <- dplyr::pull(N_ad_fem_df, AdultFemales)
-    Ns_2 <- Ns
-    if (dplyr::last(Ns_2) == 0) Ns_2 <- Ns_2[-length(Ns_2)]  # avoid trailing zero
-    lambda <- (Ns_2[-1]) / (Ns_2[-length(Ns_2)])
-    trend  <- prod(lambda) ^ (1 / length(lambda))
+    N_ad_fem <- dplyr::pull(N_df, AdultFemales)
+    N_ad_fem_2 <- N_ad_fem
+    
+    N_pairs <- dplyr::pull(N_df, BreedingPairs)
+    N_pairs_2 <- N_pairs
+    
+    N_full <- dplyr::pull(N_df, N)
+
+    
+    # if (dplyr::last(N_ad_fem_2) == 0) N_ad_fem_2 <- N_ad_fem_2[-length(N_ad_fem_2)]  # avoid trailing zero
+    lambda <- (N_ad_fem_2[-1]) / (N_ad_fem_2[-length(N_ad_fem_2)])
+    lambda[lambda==0 | is.nan(lambda)]<-NA
+    
+    lambda_full <- (N_full[-1]) / (N_full[-length(N_full)])
+    lambda_full[lambda_full==0 | is.nan(lambda_full)]<-NA
+    
+    # trend  <- prod(lambda) ^ (1 / length(lambda))
+    trend  <- exp(mean(log(lambda),na.rm=T))
+    
+    lambda_pairs<-(N_pairs_2[-1]) / (N_pairs_2[-length(N_ad_fem_2)])
+    lambda_pairs[lambda_pairs==0 | is.nan(lambda_pairs)]<-NA
+    
+    growth_df<-data.frame(
+      Lambda_N = lambda_full,
+      Lambda_AdultFemales=lambda,
+      Lambda_BreedingPairs=lambda_pairs,
+      t=1:length(lambda))
+    
     
     # Extinction flag and time (adult females <= 2)
-    finalN <- tail(Ns, 1)
+    finalN <- tail(N_ad_fem, 1)
     extinct <- finalN <= 2
-    time_extinct <- ifelse(extinct, length(Ns), NA)
+    time_extinct <- ifelse(extinct, length(N_ad_fem), NA_integer_)
     
     # Build compact summary row
     summ <- data.frame(
@@ -894,6 +970,9 @@ process_result_file <- function(filename, folder_id) {
   resu <- list(
     summary  = summ,
     N_series = N_df,
+    surv_rate=output$surv_rate,
+    reprod_pars = output$reprod_pars,
+    growth=growth_df,
     # egg_fate = egg_fate,
     mgmt     = mgmt,
     run_pars = as.data.frame(run_pars)

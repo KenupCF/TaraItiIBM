@@ -177,3 +177,149 @@ get_kinship_pair <- function(id1, id2, ped) {
   return(kin_mat[id1, id2])
 }
 
+
+
+
+simulate_ancestors_mixed <- function(init_pop,
+                                     target_kinship = 0.25,
+                                     generations = 2,
+                                     p_full = 0.6,
+                                     p_half = 0.2,
+                                     n_mothers = 5,   # FIXED number of possible mothers
+                                     n_fathers = 5,   # FIXED number of possible fathers
+                                     seed = NULL) {
+  
+  if (!is.null(seed)) set.seed(seed)
+  
+  df <- init_pop
+  founders <- df %>% dplyr::filter(is.na(mother_id) & is.na(father_id))
+  N <- nrow(founders)
+  
+  # ------------------------------------------------------------
+  # 1. Make fixed parent pools
+  # ------------------------------------------------------------
+  all_ids <- df$id
+  
+  mothers <- generate_unique_ids(n_mothers, existing = all_ids)
+  all_ids <- c(all_ids, mothers)
+  fathers <- generate_unique_ids(n_fathers, existing = all_ids)
+  all_ids <- c(all_ids, fathers)
+  
+  mother_df <- data.frame(
+    id = mothers, sex = "F",
+    age = NA, t = NA, alive = FALSE,
+    pair = NA, mother_id = NA, father_id = NA,
+    Fi = NA, nz_heritage = 1,
+    year_born = NA, origin = "Wild"
+  )
+  
+  father_df <- data.frame(
+    id = fathers, sex = "M",
+    age = NA, t = NA, alive = FALSE,
+    pair = NA, mother_id = NA, father_id = NA,
+    Fi = NA, nz_heritage = 1,
+    year_born = NA, origin = "Wild"
+  )
+  
+  # ------------------------------------------------------------
+  # 2. Cluster founders
+  # ------------------------------------------------------------
+  N_full <- round(N * p_full)
+  N_half <- round(N * p_half)
+  
+  founder_ids <- founders$id
+  full_group <- sample(founder_ids, N_full)
+  remaining <- setdiff(founder_ids, full_group)
+  half_group <- sample(remaining, N_half)
+  uniq_group <- setdiff(founder_ids, c(full_group, half_group))
+  
+  make_clusters <- function(vec) {
+    if (length(vec) == 0) return(list())
+    n <- length(vec)
+    k <- sample(1:max(1, floor(n / 2)), 1)
+    sizes <- rep(1, k)
+    for (i in seq_len(n - k)) {
+      sizes[sample(1:k, 1)] <- sizes[sample(1:k, 1)] + 1
+    }
+    cl <- suppressWarnings(split(sample(vec), rep(1:k, sizes)))
+    cl[sapply(cl, length) > 0]
+  }
+  
+  full_clusters <- make_clusters(full_group)
+  half_clusters <- make_clusters(half_group)
+  uniq_clusters <- as.list(uniq_group)
+  
+  # ------------------------------------------------------------
+  # 3. Assign parents from limited pools
+  # ------------------------------------------------------------
+  
+  assign_mother <- character(N)
+  names(assign_mother) <- founders$id
+  assign_father <- assign_mother
+  
+  # FULL SIB CLUSTERS: share one mom+one dad drawn from pools
+  for (cl in full_clusters) {
+    mid <- sample(mothers, 1)
+    fid <- sample(fathers, 1)
+    assign_mother[cl] <- mid
+    assign_father[cl] <- fid
+  }
+  
+  # HALF SIB CLUSTERS: share one father, unique mothers from pool
+  for (cl in half_clusters) {
+    fid <- sample(fathers, 1)
+    mids <- sample(mothers, length(cl), replace = TRUE)
+    assign_father[cl] <- fid
+    assign_mother[cl] <- mids
+  }
+  
+  # UNIQUE: random mother+father for each founder
+  for (idv in uniq_clusters) {
+    assign_mother[idv] <- sample(mothers, 1)
+    assign_father[idv] <- sample(fathers, 1)
+  }
+  
+  # ------------------------------------------------------------
+  # 4. Build 1st generation ancestor table
+  # ------------------------------------------------------------
+  first_gen_parents <- dplyr::bind_rows(mother_df, father_df)
+  
+  # Attach parent IDs to df
+  df$mother_id <- assign_mother[df$id]
+  df$father_id <- assign_father[df$id]
+  
+  # ------------------------------------------------------------
+  # 5. Add additional generations
+  # ------------------------------------------------------------
+  all_anc <- first_gen_parents
+  current <- first_gen_parents
+  
+  if (generations > 1) {
+    for (g in 2:generations) {
+      new_ids <- generate_unique_ids(nrow(current) * 2, existing = all_ids)
+      all_ids <- c(all_ids, new_ids)
+      
+      gp <- data.frame(
+        id = new_ids,
+        sex = rep(c("F", "M"), each = nrow(current)),
+        age = NA, t = NA, alive = FALSE,
+        pair = NA,
+        mother_id = NA, father_id = NA,
+        Fi = NA,
+        nz_heritage = 1,
+        year_born = NA,
+        origin = "Wild"
+      )
+      
+      current$mother_id <- gp$id[1:nrow(current)]
+      current$father_id <- gp$id[(nrow(current) + 1):(2 * nrow(current))]
+      
+      all_anc <- dplyr::bind_rows(all_anc, gp)
+      current <- gp
+    }
+  }
+  
+  ped <- dplyr::bind_rows(df, all_anc)
+  return(ped)
+}
+

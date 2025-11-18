@@ -56,7 +56,8 @@ run_model<-function(start_conditions,model_pars,idx=NA){
   }
   release_vec <- rep(0, n_years)
   release_vec[idx_t] <- 1
-
+  
+  pars$genetic_management<-model_pars$mgmt$gen_mgmt
   
   # pars$admix_release_years <- round(pmin(1, pmax(0, (1:n_years) - year_adm_rel + 1))) == 1
   pars$admix_release_years <- release_vec==1
@@ -85,11 +86,17 @@ run_model<-function(start_conditions,model_pars,idx=NA){
   reprod_pars   <- data.frame()                 # currently unused, left for future
   envir_stoch <- data.frame()                # to record stochastic draws
   surv_rate<- data.frame()
-  
+  stoch_record<-data.frame()
   j <- 1                                     # simulation year counter
   
   suppressMessages({
     while (j <= n_years) {
+      
+      stoch<-list()
+      stoch$cs<-stoch$hatch_prob<-stoch$fledge_prob<-stoch$juv_surv<-runif(n = 1,0,1)
+      stoch$imm_surv<-stoch$adu_surv<-runif(n = 1,0,1)
+      
+      pars$stoch<-stoch
       
       # Keep ID registry updated with any newcomers
       pars$all_ids <- unique(pop$id)
@@ -112,15 +119,18 @@ run_model<-function(start_conditions,model_pars,idx=NA){
       # If no individuals remain, stop early
       if (nrow(currentPop0) == 0) { break }
       
+      
+      # cat("Start survival\n")
+      
       # Survival process with environmental stochasticity ---------------------
       # mortality() returns a list with $alive and $stoch_q
       survival_outcome <- mortality(pop = currentPop0, currentT = j, pars = pars)
       
       # Record draw of survival enviromental stochastic component for diagnostics
-      envir_stoch <- plyr::rbind.fill(
-        envir_stoch,
-        data.frame(par = "survival", q = survival_outcome$stoch_q, t = j)
-      )
+      # envir_stoch <- plyr::rbind.fill(
+      #   envir_stoch,
+      #   data.frame(par = "survival", q = survival_outcome$stoch_q, t = j)
+      # )
       
       surv_rate <- plyr::rbind.fill(surv_rate,
                                     survival_outcome$surv_rate%>%
@@ -134,8 +144,10 @@ run_model<-function(start_conditions,model_pars,idx=NA){
       # Pairing process for breeding ------------------------------------------
       currentPop3 <- pairing(pop = currentPop2, currentT = j, pars = pars)
       
+      # cat("Start recruitment\n")
       # Recruitment and reproduction ------------------------------------------
       born_resu <- recruitment(pop = currentPop3, currentT = j, pars = pars)
+      
       
       
       reprod_pars<-plyr::rbind.fill(reprod_pars,
@@ -174,6 +186,9 @@ run_model<-function(start_conditions,model_pars,idx=NA){
         dplyr::mutate(Fi = NULL, nz_heritage = NULL) %>%
         dplyr::left_join(Fi_df, by = "id")
       
+      stoch_record<-plyr::rbind.fill(stoch_record,
+                                     as.data.frame(pars$stoch)%>%
+                                       dplyr::mutate(t=j))
       # Advance time step
       j <- j + 1
     }
@@ -195,7 +210,7 @@ run_model<-function(start_conditions,model_pars,idx=NA){
   return(list(
     pop        = pop %>% dplyr::mutate(i = idx),
     full_ids   = full_ids,
-    envir_stoch = envir_stoch,
+    envir_stoch = stoch_record,
     # kinship   = kinship,
     pars       = pars,
     surv_rate = surv_rate %>% dplyr::mutate(i = idx),
