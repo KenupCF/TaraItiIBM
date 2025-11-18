@@ -126,11 +126,7 @@ mortality <- function(pop, currentT, pars, seed = 19) {
   current$surv <- surv
   
   # Apply carrying capacity truncation
-  current <- current %>%
-    dplyr::left_join(N_df) %>%
-    dplyr::group_by(id) %>%
-    dplyr::mutate(surv = dplyr::case_when(AboveC ~ min(surv_trunc, surv), TRUE ~ surv))
-  
+
   # Validate probabilities
   if (any(is.na(surv)) | any(surv < 0) | any(surv > 1)) {
     stop("Invalid estimated survival probability")
