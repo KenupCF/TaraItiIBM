@@ -95,6 +95,8 @@ run_model<-function(start_conditions,model_pars,idx=NA){
       stoch<-list()
       stoch$cs<-stoch$hatch_prob<-stoch$fledge_prob<-stoch$juv_surv<-runif(n = 1,0,1)
       stoch$imm_surv<-stoch$adu_surv<-runif(n = 1,0,1)
+      stoch$catastrophe<-rbinom(n = 1,size = 1,prob = model_pars$bio$catastrophe_probability)
+      
       
       pars$stoch<-stoch
       

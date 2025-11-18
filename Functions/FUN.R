@@ -120,7 +120,8 @@ mortality <- function(pop, currentT, pars, seed = 19) {
       (pars$phi_df$Beta_field2_juv * (current$age == 1) * (current$field == "Field2")) +
       (pars$phi_df$Beta_field2_imm * (current$age == 2) * (current$field == "Field2")) +
       (pars$phi_df$Beta_field2_adu * (current$age >= 3) * (current$field == "Field2"))
-  )
+  ) *
+  (1-(stoch$catastrophe*(current$age==1))) # this kills every juvenile on a catastrophic year   
   
   current$surv <- surv
   
@@ -335,6 +336,8 @@ recruitment <- function(pop, currentT, pars, seed = 19, envir_stoch = TRUE, star
     ) %>%
       pmax(0) %>%
       identity()
+    
+    brood_size<-brood_size * (1-stoch$catastrophe) ## turn off breeding if there is a catastrophe
     
     reproducing$cs <- brood_size
 
