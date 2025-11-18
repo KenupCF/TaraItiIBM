@@ -2,8 +2,8 @@
 # Master run script
 # ============================
 
-runLabel <- "bigRunV6"                    # label for this run (used in outputs and sheet)
-# runLabel <- "foo"                    # label for this run (used in outputs and sheet)
+# runLabel <- "bigRunV6"                    # label for this run (used in outputs and sheet)
+runLabel <- "foo"                    # label for this run (used in outputs and sheet)
 get_runs_from_gsheet <- FALSE             # pull scheduled runs from Google Sheet
 replace_runs_gsheet   <- FALSE            # overwrite Google Sheet "Runs" tab with computed runs
 prior_rng_seed <- 1e3                     # base seed for prior sampling per p
@@ -289,6 +289,7 @@ if (model_pars$sim$parallel_across_runs) {
         init_pop <- init_population(pars = init_pars)
         set.seed(prior_rng_seed + p)
         init_pop <- pairing(pop = init_pop, currentT = 0, pars = init_pars)
+        init_pop <- simulate_ancestors_mixed(init_pop = init_pop,generations = 2)
         start_conditions <- list(init_pop = init_pop)
         
         # Run the simulation
@@ -321,7 +322,9 @@ if (model_pars$sim$parallel_across_runs) {
   # Example: choose one specific iteration or loop all
   # i <- 1
   for (i in iterations_to_run$i) {
+    
     idx <- i
+    
     p <- iterations_to_run %>% dplyr::filter(i == idx) %>% dplyr::pull(p)
     
     all_iterations <- all_iterations %>% dplyr::arrange(i)
@@ -334,6 +337,7 @@ if (model_pars$sim$parallel_across_runs) {
     init_pop <- init_population(pars = init_pars)
     set.seed(prior_rng_seed + p)
     init_pop <- pairing(pop = init_pop, currentT = 0, pars = init_pars)
+    init_pop <- simulate_ancestors_mixed(init_pop = init_pop,generations = 2)
     start_conditions <- list(init_pop = init_pop)
     
     set.seed(prior_rng_seed + p)
