@@ -82,9 +82,9 @@ mortality <- function(pop, currentT, pars, seed = 19) {
   # Carrying capacity truncation terms
   N_df <- current %>%
     dplyr::group_by(subpop) %>%
-    dplyr::summarise(N_breedings = sum(alive & sex=="F" & !is.na(pair) ), .groups = "drop") %>%
+    dplyr::summarise(N_occ = max(sum(alive & sex=="F" & age > 1 ),sum(alive & sex=="M" & age > 1 )) , .groups = "drop") %>%
     dplyr::left_join(pars$carr_capac_df) %>%
-    dplyr::mutate(AboveC = N_breedings > C, surv_trunc = 1 / (N_breedings / C))
+    dplyr::mutate(AboveC = N_occ > C, surv_trunc = 1 / (N_occ / C))
   
   # Shared stochastic term (zeroed below)
   # q_sample <- runif(n = 1, min = 0, max = 1)
