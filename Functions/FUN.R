@@ -82,9 +82,9 @@ mortality <- function(pop, currentT, pars, seed = 19) {
   # Carrying capacity truncation terms
   N_df <- current %>%
     dplyr::group_by(subpop) %>%
-    dplyr::summarise(N = sum(alive), .groups = "drop") %>%
+    dplyr::summarise(N_breedings = sum(alive & sex=="F" & !is.na(pair) ), .groups = "drop") %>%
     dplyr::left_join(pars$carr_capac_df) %>%
-    dplyr::mutate(AboveC = N > C, surv_trunc = 1 / (N / C))
+    dplyr::mutate(AboveC = N_breedings > C, surv_trunc = 1 / (N_breedings / C))
   
   # Shared stochastic term (zeroed below)
   # q_sample <- runif(n = 1, min = 0, max = 1)
@@ -126,10 +126,11 @@ mortality <- function(pop, currentT, pars, seed = 19) {
   current$surv <- surv
   
   # Apply carrying capacity truncation
-  # current <- current %>%
-    # dplyr::left_join(N_df) %>%
-    # dplyr::group_by(id) %>%
-    # dplyr::mutate(surv = dplyr::case_when(AboveC ~ min(surv_trunc, surv), TRUE ~ surv))%>%
+  current <- current %>%
+    dplyr::left_join(N_df) %>%
+    dplyr::group_by(id) %>%
+    dplyr::mutate(surv = dplyr::case_when(AboveC & age > 2 ~ min(surv_trunc, surv),
+                                          TRUE ~ surv))
     
     
   # Validate probabilities
