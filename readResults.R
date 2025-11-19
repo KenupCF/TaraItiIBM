@@ -14,12 +14,12 @@ source(".\\Functions\\FUN.R")
 # SETUP
 # =======================
 
-folder_extr <- "D:\\03-Work\\01-Science\\00-Research Projects\\Tara Iti\\TaraItiIBM\\Results\\Sensitivity_Analysis"
+folder_extr <- "D:\\03-Work\\01-Science\\00-Research Projects\\Tara Iti\\TaraItiIBM\\Results\\bigRunV7"
 
 
 folderID    <- gsub(x = folder_extr, "^.*/", "")   # Extract last path segment as a folder label
-loopSize    <- 35e3                                  # Max number of files to attempt per run
-time_limit_secs <- 60*60*(60/60)                  # time limit in seconds
+loopSize    <- 22e3                               # Max number of files to attempt per run
+time_limit_secs <- 60*60*(120/60)                  # time limit in seconds
 buffer_size <- 25                                   # Number of records to batch-write into DuckDB
 
 # =======================
@@ -52,7 +52,7 @@ files_df <- files_df %>% filter(!duplicated(i))
 # Connect to DuckDB
 # =======================
 
-db_path <- paste0(folder_extr, "\\Sensitivity_Analysis.duckdb")
+db_path <- paste0(folder_extr, "\\bigRunV7.duckdb")
 con <- dbConnect(duckdb::duckdb(), dbdir = db_path, read_only = FALSE)
 
 # Find which i have already been imported for this folder
@@ -90,7 +90,9 @@ counter <- 0
 buffer <- list(
   summary  = vector("list", length = buffer_size),
   N_series = vector("list", length = buffer_size),
-  egg_fate = vector("list", length = buffer_size),
+  reprod_pars = vector("list", length = buffer_size),
+  surv_rate  = vector("list", length = buffer_size),
+  growth  = vector("list", length = buffer_size),
   mgmt     = vector("list", length = buffer_size),
   run_pars = vector("list", length = buffer_size)
 )
@@ -118,8 +120,10 @@ for (f in seq_len(nrow(files_df))) {
   # buffer$mgmt[[f]]      <- result$mgmt
   buffer$summary[[f]]   <- result$summary
   buffer$N_series[[f]]  <- result$N_series
-  buffer$egg_fate[[f]]  <- result$egg_fate
+  buffer$reprod_pars[[f]]  <- result$reprod_pars
+  buffer$surv_rate[[f]]  <- result$surv_rate
   buffer$run_pars[[f]]  <- result$run_pars
+  buffer$growth[[f]]  <- result$growth
   
   # Periodic writes by buffer size or at the end
   if (f %% buffer_size == 0 || f == nrow(files_df)) {
@@ -128,6 +132,9 @@ for (f in seq_len(nrow(files_df))) {
     dbWriteTable(con, "summary",   bind_rows(buffer$summary), append = TRUE)
     dbWriteTable(con, "N_series",  bind_rows(buffer$N_series), append = TRUE)
     dbWriteTable(con, "run_pars",  bind_rows(buffer$run_pars), append = TRUE)
+    dbWriteTable(con, "surv_rate",  bind_rows(buffer$surv_rate), append = TRUE)
+    dbWriteTable(con, "reprod_pars",  bind_rows(buffer$reprod_pars), append = TRUE)
+    dbWriteTable(con, "growth",  bind_rows(buffer$reprod_pars), append = TRUE)
     
     # Reset buffers after writing
     buffer <- list(summary = list(), N_series = list(), egg_fate = list(), mgmt = list(), run_pars = list())
