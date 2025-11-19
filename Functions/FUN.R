@@ -899,7 +899,11 @@ process_result_file <- function(filename, folder_id) {
         Fp = sum(Fi * alive) / sum(alive),
         Kp = sum(nz_heritage * alive) / sum(alive),
         .groups = "drop"
-      )
+      )%>%
+      dplyr::mutate(t=factor(t,levels=sort(unique(output$pop$t))))%>%
+      tidyr::complete(t,i,fill=list(AdultFemales=0,Fp=NA,Kp=NA))%>%
+      dplyr::mutate(t=as.numeric(t))
+      
     
     
     N_df <- output$pop %>%
@@ -932,16 +936,16 @@ process_result_file <- function(filename, folder_id) {
     
     # if (dplyr::last(N_ad_fem_2) == 0) N_ad_fem_2 <- N_ad_fem_2[-length(N_ad_fem_2)]  # avoid trailing zero
     lambda <- (N_ad_fem_2[-1]) / (N_ad_fem_2[-length(N_ad_fem_2)])
-    lambda[lambda==0 | is.nan(lambda)]<-NA
+    lambda[lambda%in%c(0,Inf,-Inf) | is.nan(lambda)]<-NA
     
     lambda_full <- (N_full[-1]) / (N_full[-length(N_full)])
-    lambda_full[lambda_full==0 | is.nan(lambda_full)]<-NA
+    lambda_full[lambda_full%in%c(0,Inf,-Inf) | is.nan(lambda_full)]<-NA
     
     # trend  <- prod(lambda) ^ (1 / length(lambda))
     trend  <- exp(mean(log(lambda),na.rm=T))
     
     lambda_pairs<-(N_pairs_2[-1]) / (N_pairs_2[-length(N_ad_fem_2)])
-    lambda_pairs[lambda_pairs==0 | is.nan(lambda_pairs)]<-NA
+    lambda_pairs[lambda_pairs%in%c(0,Inf,-Inf) | is.nan(lambda_pairs)]<-NA
     
     growth_df<-data.frame(
       Lambda_N = lambda_full,
@@ -951,9 +955,9 @@ process_result_file <- function(filename, folder_id) {
     
     
     # Extinction flag and time (adult females <= 2)
-    finalN <- tail(N_ad_fem, 1)
+    finalN <- tail(N_ad_fem[], 1)
     extinct <- finalN <= 2
-    time_extinct <- ifelse(extinct, length(N_ad_fem), NA_integer_)
+    time_extinct <- ifelse(extinct, min(which(N_ad_fem<=2)), NA_integer_)
     
     # Build compact summary row
     summ <- data.frame(
