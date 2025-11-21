@@ -2,8 +2,8 @@
 # Master run script
 # ============================
 
-# runLabel <- "bigRunV6"                    # label for this run (used in outputs and sheet)
-runLabel <- "bigRunV7_newStructure"                    # label for this run (used in outputs and sheet)
+# runLabel <- "bigRunV6"                                         # label for this run (used in outputs and sheet)
+runLabel <- "bigRunV8_alternativeElicitation"                    # label for this run (used in outputs and sheet)
 get_runs_from_gsheet <- FALSE             # pull scheduled runs from Google Sheet
 replace_runs_gsheet   <- FALSE            # overwrite Google Sheet "Runs" tab with computed runs
 prior_rng_seed <- 1e3                     # base seed for prior sampling per p
@@ -36,7 +36,7 @@ source(".tokens/setDeviceName.R")
 model_pars <- list(priors = list(), sim = list(), bio = list(), mgmt = list())
 
 # Bring in aggregated expert elicitation and sim parameter scaffolding
-load("./Data/Tara_Iti_Aggregated.RData")
+load("./Data/Tara_Iti_Aggregated_2025_11_21.RData")
 source("./Parameters/SimPars.R")
 
 # Optionally re-run data analysis scripts to refresh priors and bio blocks
